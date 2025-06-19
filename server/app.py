@@ -85,39 +85,48 @@ def get_power_by_id(id):
 
 @app.route("/hero_powers", methods=["POST"])
 def post_hero_powers():
-    data = request.get_json()
+    data = request.json
+    required_fields = ["strength", "power_id", "hero_id"]
 
-    if not data or not all(i in data for i in ("strength", "hero_id", "power_id")):
-        return jsonify(
-            {"errors": ["Missing required fields: strength, hero_id, power_id"]}
-        ), 400
+    if not all(field in data for field in required_fields):
+        return jsonify({"errors": ["validation errors"]}), 400
 
-    strength = data.get("strength")
-    power_id = data.get("power_id")
-    hero_id = data.get("hero_id")
-
-    hero = Hero.query.get(hero_id)
-    power = Power.query.get(power_id)
+    hero = Hero.query.get(data["hero_id"])
+    power = Power.query.get(data["power_id"])
 
     if not hero or not power:
-        return jsonify({"errors": ["Hero or Power not found"]}), 404
+        return jsonify({"errors": ["validation errors"]}), 404
+
     try:
-        hero_power = HeroPower(strength=strength, hero_id=hero_id, power_id=power_id)
+        hero_power = HeroPower(
+            strength=data["strength"],
+            hero_id=data["hero_id"],
+            power_id=data["power_id"],
+        )
         db.session.add(hero_power)
         db.session.commit()
 
-        hero_data = {
-            "id": hero.id,
-            "name": hero.name,
-            "super_name": hero.super_name,
-            "powers": [
-                {"id": power.id, "name": power.name, "description": power.description}
-                for power in hero.powers
-            ],
-        }
-        return jsonify(hero_data), 200
+        return jsonify(
+            {
+                "id": hero_power.id,
+                "hero_id": hero_power.hero_id,
+                "power_id": hero_power.power_id,
+                "strength": hero_power.strength,
+                "hero": {
+                    "id": hero.id,
+                    "name": hero.name,
+                    "super_name": hero.super_name,
+                },
+                "power": {
+                    "id": power.id,
+                    "name": power.name,
+                    "description": power.description,
+                },
+            }
+        ), 200
     except Exception as e:
-        return jsonify({"errors": [str(e)]}), 400
+        db.session.rollback()
+        return jsonify({"errors": ["validation errors"]}), 400
 
 
 @app.route("/powers/<int:id>", methods=["PATCH"])
