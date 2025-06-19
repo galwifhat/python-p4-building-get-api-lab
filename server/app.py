@@ -24,7 +24,6 @@ def index():
     return "<h1>Code challenge</h1>"
 
 
-# GET / heroes
 @app.route("/heroes", methods=["GET"])
 def get_heroes():
     heroes = Hero.query.all()
@@ -32,9 +31,8 @@ def get_heroes():
         {"id": hero.id, "name": hero.name, "super_name": hero.super_name}
         for hero in heroes
     ]
-    # heroes_data = [hero.to_dict() for hero in heroes]
-
-    return make_response(heroes_data), 200
+    response = make_response(heroes_data, 200)
+    return response
 
 
 @app.route("/heroes/<int:id>", methods=["GET"])
@@ -43,53 +41,27 @@ def get_hero_by_id(id):
     if not hero:
         return make_response({"error": "Hero not found"}), 404
     hero_data = hero.to_dict()
-    # hero_data = [hero.to_dict for hero in hero.hero_powers]
-    # hero_data = {
-    #     "id": hero.id,
-    #     "name": hero.name,
-    #     "super_name": hero.super_name,
-    #     "hero_powers": [
-    #         {
-    #             "id": hp.id,
-    #             "hero_id": hp.hero_id,
-    #             "power_id": hp.power_id,
-    #             "strength": hp.strength,
-    #             "power": {
-    #                 "id": hp.power.id,
-    #                 "name": hp.power.name,
-    #                 "description": hp.power.description,
-    #             },
-    #         }
-    #         for hp in hero.hero_powers
-    #     ],
-    # }
     return jsonify(hero_data), 200
 
 
 @app.route("/powers", methods=["GET"])
 def get_powers():
-    powers = Power.query.all()
-    powers_data = powers.to_dict()
-    # powers_data = [
-    #     {"id": power.id, "name": power.name, "description": power.description}
-    #     for power in powers
-    # ]
-    return powers_data, 200
-    return jsonify(powers_data), 200
+    powers = [power.to_dict() for power in Power.query.all()]
+    response = make_response(jsonify(powers), 200)
+    return response
 
 
 @app.route("/powers/<int:id>", methods=["GET"])
 def get_power_by_id(id):
-    # power = Power.query.get(id)
     power = Power.query.filter(Power.id == id).first()
     if not power:
-        return jsonify({"error": "Power not found"}), 404
+        return make_response(jsonify({"error": "Power not found"}), 404)
+    power_data = power.to_dict()
+    response = make_response(power_data, 200)
+    return response
 
-    power_data = {"id": power.id, "name": power.name, "description": power.description}
-    return jsonify(power_data)
 
-
-@app.route("/hero_powers", methods=["POST"])
+@app.route("/hero_powers", methods=["GET", "POST"])
 def create_hero_powers():
     data = request.json
 
@@ -123,24 +95,6 @@ def create_hero_powers():
         db.session.rollback()
         return jsonify({"errors": ["validation errors"]}), 400
 
-
-# POST /hero_powers
-# @app.route("/hero_powers", methods=["POST"])
-# def assign_power_to_hero():
-#     data = request.get_json()
-#     try:
-#         hero_power = HeroPower(
-#             strength=data["strength"],
-#             hero_id=data["hero_id"],
-#             power_id=data["power_id"],
-#         )
-#         db.session.add(hero_power)
-#         db.session.commit()
-
-#         hero = Hero.query.get(hero_power.hero_id)
-#         return jsonify(hero.to_dict()), 201
-#     except Exception as e:
-#         return jsonify({"errors": [str(e)]}), 400
 
 
 @app.route("/powers/<int:id>", methods=["PATCH"])
